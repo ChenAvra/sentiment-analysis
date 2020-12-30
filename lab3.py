@@ -1,5 +1,6 @@
 import csv
 from nltk.corpus import stopwords as stopwords
+from nltk.tokenize import TweetTokenizer
 
 from nltk.stem import PorterStemmer
 import pandas as pd
@@ -33,7 +34,8 @@ def loading_data_preProcessing(path):
             if to_fix_row[1:]== '@':
                 to_fix_row=to_fix_row[1:]
                 to_fix_row=to_fix_row[0].split(' ')
-
+            tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
+            to_fix_row=tknzr.tokenize(to_fix_row)
             # to_fix_row=to_fix_row[1:]
             # to_fix_row=to_fix_row[0].split(' ')
             to_fix_row = to_fix_row.split(' ')
