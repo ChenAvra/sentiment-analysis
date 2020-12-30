@@ -12,6 +12,7 @@ nltk.download('sentiwordnet')
 nltk.download('wordnet')
 nltk.download('punkt')
 from sklearn import svm
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from sklearn.metrics import classification_report
 import statistics
@@ -27,45 +28,53 @@ def loading_data_preProcessing(path):
         reader = csv.DictReader(dataSet, delimiter=',')
         i=0
         for row in reader:
-            print(i)
-            i=i+1
+
             # to_fix_row=row['SentimentText'].split('@')
+
             to_fix_row=row['SentimentText']
-            if to_fix_row[1:]== '@':
-                to_fix_row=to_fix_row[1:]
-                to_fix_row=to_fix_row[0].split(' ')
+            if(i==80000):
+                print(to_fix_row)
+            # if to_fix_row[1:]== '@':
+            #     to_fix_row=to_fix_row[1:]
+            #     to_fix_row=to_fix_row[0].split(' ')
             tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
             to_fix_row=tknzr.tokenize(to_fix_row)
             # to_fix_row=to_fix_row[1:]
             # to_fix_row=to_fix_row[0].split(' ')
-            to_fix_row = to_fix_row.split(' ')
+            # to_fix_row = to_fix_row.split(' ')
             new_row=""
             for word in to_fix_row:
-                if (word not in stop_words and not word.isdigit() and not ''):
+                #add . , : !
+                if (word not in stop_words and not word ==''):
                     word2= word.lower()
                     word3=PorterStemmer().stem(word2)
                     new_row=new_row+" "+word3
+            print(i)
+            i=i+1
 
             train_x.append(new_row)
             train_y.append(row['Sentiment'])
 
         return train_x, train_y
+
+
 def loading_data_preProcessing_test(path):
     with open(path, encoding='latin-1') as dataSet:
         reader = csv.DictReader(dataSet, delimiter=',')
         i=0
         for row in reader:
-            print(i)
-            i=i+1
+
             # to_fix_row=row['SentimentText'].split('@')
             to_fix_row=row['SentimentText']
-            if to_fix_row[1:]== '@':
-                to_fix_row=to_fix_row[1:]
-                to_fix_row=to_fix_row[0].split(' ')
+            # if to_fix_row[1:]== '@':
+            #     to_fix_row=to_fix_row[1:]
+            #     to_fix_row=to_fix_row[0].split(' ')
 
             # to_fix_row=to_fix_row[1:]
             # to_fix_row=to_fix_row[0].split(' ')
-            to_fix_row = to_fix_row.split(' ')
+            # to_fix_row = to_fix_row.split(' ')
+            tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
+            to_fix_row = tknzr.tokenize(to_fix_row)
             new_row=""
             for word in to_fix_row:
                 if (word not in stop_words and not word.isdigit() and not ''):
@@ -80,18 +89,33 @@ def loading_data_preProcessing_test(path):
 # def split_train_test
 #feature extraction using tfidf
 def feature_extraction_train_test(train,test):
-    vectorize=TfidfVectorizer()
+    vectorize=TfidfVectorizer(ngram_range=(1,2))
     features_train=vectorize.fit_transform(train)
     features_test=vectorize.transform(test)
+    # print(features_test[1])
+    # print(features_test[2])
+
     return features_train,features_test
 
 
-def classifierNaiveBayse(features_train,test,features_test,test_test):
-    model=MultinomialNB(alpha=0.01)
+def classifierNaiveBayse(features_train,test,features_test):
+    # model=MultinomialNB(alpha=0.01)
+    params={}
+    skf = StratifiedKFold(n_splits=10)
+    model = GridSearchCV(MultinomialNB(),cv=skf,params=params, n_jobs=1)
+
     model.fit(features_train,test)
     pred = model.predict(features_test)
-    # score = accuracy_score(test_test, pred)
-    # print("accuracy:", score)
+    with open('names1.csv', 'w', newline='') as csvfile:
+        fieldnames = ['ID', 'Sentiment']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        i=0
+        for label in pred:
+            writer.writerow({'ID': i, 'Sentiment': label})
+            i=i+1
+
+
 
 def classifierSVM(train,test):
     vectorize = TfidfVectorizer()
@@ -105,6 +129,8 @@ def classifierLogisticREG(features_train,test):
 
 print('='*20+"starting preprocessing"+'='*20)
 train,test=loading_data_preProcessing("C:\\Users\\Chen\\Desktop\\python_course\\Train.csv")
+train_x=[]
+train_y=[]
 train_test=loading_data_preProcessing_test("C:\\Users\\Chen\\Desktop\\python_course\\Test.csv")
 
 
@@ -118,3 +144,4 @@ classifierNaiveBayse(features_train,test,features_test)
 
 print('='*20+"starting training the model svm"+'='*20)
 classifierSVM(train,test)
+
