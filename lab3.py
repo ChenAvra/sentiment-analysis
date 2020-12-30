@@ -6,6 +6,7 @@ from nltk.stem import PorterStemmer
 import pandas as pd
 from nltk.corpus import sentiwordnet as swn
 import nltk
+# nltk.download('stopwords')
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 nltk.download('sentiwordnet')
@@ -21,9 +22,10 @@ from sklearn.metrics import accuracy_score
 from nltk.stem.wordnet import WordNetLemmatizer
 
 stop_words = set(stopwords.words("english"))
+stop_words.update(["Ð","¨","°","Ñ","Ð","Ø","¹","Ù","","²","§",":",".","!","...",",",";","?","..","~","@","'","^","#","=]","/","¼","Ã","-","¿","©",")","(","\"","*","$","::","xx","&","¶",":|","&","_","","]","["],">","<","´",'"\"',"___i",". . .","|")
 train_x=[]#sentiment_text
 train_y=[]#sentiment label
-def loading_data_preProcessing(path):
+def loading_data_preProcessing(path, is_test):
     with open(path, encoding='latin-1') as dataSet:
         reader = csv.DictReader(dataSet, delimiter=',')
         i=0
@@ -45,7 +47,7 @@ def loading_data_preProcessing(path):
             new_row=""
             for word in to_fix_row:
                 #add . , : !
-                if (word not in stop_words and not word ==''):
+                if (word not in stop_words and not word.isdigit() and not len(word)==1):
                     word2= word.lower()
                     word3=PorterStemmer().stem(word2)
                     new_row=new_row+" "+word3
@@ -53,48 +55,46 @@ def loading_data_preProcessing(path):
             i=i+1
 
             train_x.append(new_row)
+            if is_test:
+                return train_x
             train_y.append(row['Sentiment'])
-
         return train_x, train_y
 
 
-def loading_data_preProcessing_test(path):
-    with open(path, encoding='latin-1') as dataSet:
-        reader = csv.DictReader(dataSet, delimiter=',')
-        i=0
-        for row in reader:
-
-            # to_fix_row=row['SentimentText'].split('@')
-            to_fix_row=row['SentimentText']
-            # if to_fix_row[1:]== '@':
-            #     to_fix_row=to_fix_row[1:]
-            #     to_fix_row=to_fix_row[0].split(' ')
-
-            # to_fix_row=to_fix_row[1:]
-            # to_fix_row=to_fix_row[0].split(' ')
-            # to_fix_row = to_fix_row.split(' ')
-            tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
-            to_fix_row = tknzr.tokenize(to_fix_row)
-            new_row=""
-            for word in to_fix_row:
-                if (word not in stop_words and not word.isdigit() and not ''):
-                    word2= word.lower()
-                    word3=PorterStemmer().stem(word2)
-                    new_row=new_row+" "+word3
-
-            train_x.append(new_row)
-            # train_y.append(row['Sentiment'])
-
-        return train_x
+# def loading_data_preProcessing_test(path):
+#     with open(path, encoding='latin-1') as dataSet:
+#         reader = csv.DictReader(dataSet, delimiter=',')
+#         i=0
+#         for row in reader:
+#
+#             # to_fix_row=row['SentimentText'].split('@')
+#             to_fix_row=row['SentimentText']
+#             # if to_fix_row[1:]== '@':
+#             #     to_fix_row=to_fix_row[1:]
+#             #     to_fix_row=to_fix_row[0].split(' ')
+#
+#             # to_fix_row=to_fix_row[1:]
+#             # to_fix_row=to_fix_row[0].split(' ')
+#             # to_fix_row = to_fix_row.split(' ')
+#             tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
+#             to_fix_row = tknzr.tokenize(to_fix_row)
+#             new_row=""
+#             for word in to_fix_row:
+#                 if (word not in stop_words and not word.isdigit() and not ''):
+#                     word2= word.lower()
+#                     word3=PorterStemmer().stem(word2)
+#                     new_row=new_row+" "+word3
+#
+#             train_x.append(new_row)
+#             # train_y.append(row['Sentiment'])
+#
+#         return train_x
 # def split_train_test
 #feature extraction using tfidf
 def feature_extraction_train_test(train,test):
     vectorize=TfidfVectorizer(ngram_range=(1,2))
     features_train=vectorize.fit_transform(train)
     features_test=vectorize.transform(test)
-    # print(features_test[1])
-    # print(features_test[2])
-
     return features_train,features_test
 
 
@@ -136,10 +136,10 @@ def classifierLogisticREG(features_train,test):
     pass
 
 print('='*20+"starting preprocessing"+'='*20)
-train,test=loading_data_preProcessing("C:\\Users\\Chen\\Desktop\\python_course\\Train.csv")
+train,test=loading_data_preProcessing("Train.csv",False)
 train_x=[]
 train_y=[]
-train_test=loading_data_preProcessing_test("C:\\Users\\Chen\\Desktop\\python_course\\Test.csv")
+train_test=loading_data_preProcessing("Test.csv",True)
 
 
 print('='*20+"starting features extraction"+'='*20)
