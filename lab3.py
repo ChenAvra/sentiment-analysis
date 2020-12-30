@@ -99,13 +99,18 @@ def feature_extraction_train_test(train,test):
 
 
 def classifierNaiveBayse(features_train,test,features_test):
-    # model=MultinomialNB(alpha=0.01)
+    model=MultinomialNB(alpha=0.01)
     params={}
-    skf = StratifiedKFold(n_splits=10)
-    model = GridSearchCV(MultinomialNB(),cv=skf,params=params, n_jobs=1)
+    # skf = StratifiedKFold(n_splits=10)
+    # model = GridSearchCV(MultinomialNB(),cv=skf,params=params, n_jobs=1)
 
     model.fit(features_train,test)
     pred = model.predict(features_test)
+    return pred
+
+
+
+def write_csv(pred):
     with open('names1.csv', 'w', newline='') as csvfile:
         fieldnames = ['ID', 'Sentiment']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -117,12 +122,15 @@ def classifierNaiveBayse(features_train,test,features_test):
 
 
 
-def classifierSVM(train,test):
-    vectorize = TfidfVectorizer()
-    features_train = vectorize.fit_transform(train)
+def classifierSVM(features_train,test,features_test):
+    # vectorize = TfidfVectorizer()
+    # features_train = vectorize.fit_transform(train)
     model=svm.SVC(kernel='linear', C=1, random_state=42)
-    scores = cross_val_score(model, features_train,test, cv=10)
-    print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+    model.fit(features_train,test)
+    pred=model.predict(features_test)
+    # scores = cross_val_score(model, features_train,test, cv=10)
+    # print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+    return pred
 
 def classifierLogisticREG(features_train,test):
     pass
@@ -139,9 +147,10 @@ features_train,features_test=feature_extraction_train_test(train,train_test)
 
 
 print('='*20+"starting training the model naive bayes"+'='*20)
-classifierNaiveBayse(features_train,test,features_test)
+# classifierNaiveBayse(features_train,test,features_test)
 
 
 print('='*20+"starting training the model svm"+'='*20)
-classifierSVM(train,test)
+pred=classifierSVM(features_train,test,features_test)
+write_csv(pred)
 
