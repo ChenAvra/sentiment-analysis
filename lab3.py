@@ -10,9 +10,11 @@ import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 nltk.download('sentiwordnet')
+nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('punkt')
 from sklearn import svm
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 from sklearn.metrics import classification_report
@@ -49,50 +51,27 @@ def loading_data_preProcessing(path, is_test):
                 #add . , : !
                 if (word not in stop_words and not word.isdigit() and not len(word)==1):
                     word2= word.lower()
-                    word3=PorterStemmer().stem(word2)
-                    new_row=new_row+" "+word3
+                    # word3=PorterStemmer().stem(word2)
+                    new_row=new_row+" "+word2
             print(i)
             i=i+1
 
             train_x.append(new_row)
-            if is_test:
-                return train_x
-            train_y.append(row['Sentiment'])
+            if not is_test:
+                train_y.append(row['Sentiment'])
+        if is_test:
+            return train_x
+
         return train_x, train_y
 
-
-# def loading_data_preProcessing_test(path):
-#     with open(path, encoding='latin-1') as dataSet:
-#         reader = csv.DictReader(dataSet, delimiter=',')
-#         i=0
-#         for row in reader:
-#
-#             # to_fix_row=row['SentimentText'].split('@')
-#             to_fix_row=row['SentimentText']
-#             # if to_fix_row[1:]== '@':
-#             #     to_fix_row=to_fix_row[1:]
-#             #     to_fix_row=to_fix_row[0].split(' ')
-#
-#             # to_fix_row=to_fix_row[1:]
-#             # to_fix_row=to_fix_row[0].split(' ')
-#             # to_fix_row = to_fix_row.split(' ')
-#             tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
-#             to_fix_row = tknzr.tokenize(to_fix_row)
-#             new_row=""
-#             for word in to_fix_row:
-#                 if (word not in stop_words and not word.isdigit() and not ''):
-#                     word2= word.lower()
-#                     word3=PorterStemmer().stem(word2)
-#                     new_row=new_row+" "+word3
-#
-#             train_x.append(new_row)
-#             # train_y.append(row['Sentiment'])
-#
-#         return train_x
-# def split_train_test
-#feature extraction using tfidf
+#  #feature extraction using tfidf
 def feature_extraction_train_test(train,test):
     vectorize=TfidfVectorizer(ngram_range=(1,2))
+    vectorize = TfidfVectorizer(min_df = 5,
+                             max_df = 0.8,
+                             sublinear_tf = True,
+                             use_idf = True,ngram_range=(1,2))
+    # vectorize = TfidfVectorizer()
     features_train=vectorize.fit_transform(train)
     features_test=vectorize.transform(test)
     return features_train,features_test
@@ -110,22 +89,41 @@ def classifierNaiveBayse(features_train,test,features_test):
 
 
 
-def write_csv(pred):
-    with open('names1.csv', 'w', newline='') as csvfile:
-        fieldnames = ['ID', 'Sentiment']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        i=0
-        for label in pred:
-            writer.writerow({'ID': i, 'Sentiment': label})
-            i=i+1
+def write_csv(pred,model_name):
+    if(model_name=='Naive Bayes'):
+        with open('sample_'+model_name+'.csv', 'w', newline='') as csvfile:
+            fieldnames = ['ID', 'Sentiment']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            i=0
+            for label in pred:
+                writer.writerow({'ID': i, 'Sentiment': label})
+                i=i+1
+    if(model_name=='Logistic Regression'):
+        with open('sample_'+model_name+'.csv', 'w', newline='') as csvfile:
+            fieldnames = ['ID', 'Sentiment']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            i=0
+            for label in pred:
+                writer.writerow({'ID': i, 'Sentiment': label})
+                i=i+1
+    if(model_name=='SVM'):
+        with open('sample_'+model_name+'.csv', 'w', newline='') as csvfile:
+            fieldnames = ['ID', 'Sentiment']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            i=0
+            for label in pred:
+                writer.writerow({'ID': i, 'Sentiment': label})
+                i=i+1
 
 
 
 def classifierSVM(features_train,test,features_test):
     # vectorize = TfidfVectorizer()
     # features_train = vectorize.fit_transform(train)
-    model=svm.SVC(kernel='linear', C=1, random_state=42)
+    model=svm.SVC(kernel='linear', C=2,random_state=42)
     model.fit(features_train,test)
     pred=model.predict(features_test)
     # scores = cross_val_score(model, features_train,test, cv=10)
@@ -133,7 +131,11 @@ def classifierSVM(features_train,test,features_test):
     return pred
 
 def classifierLogisticREG(features_train,test):
-    pass
+    model=LogisticRegression(random_state=42,C=2)
+    model.fit(features_train,test)
+    pred=model.predict(features_test)
+    return pred
+
 
 print('='*20+"starting preprocessing"+'='*20)
 train,test=loading_data_preProcessing("Train.csv",False)
@@ -147,10 +149,14 @@ features_train,features_test=feature_extraction_train_test(train,train_test)
 
 
 print('='*20+"starting training the model naive bayes"+'='*20)
-# classifierNaiveBayse(features_train,test,features_test)
-
+pred=classifierNaiveBayse(features_train,test,features_test)
+write_csv(pred,'Naive Bayes')
 
 print('='*20+"starting training the model svm"+'='*20)
 pred=classifierSVM(features_train,test,features_test)
-write_csv(pred)
+write_csv(pred,'SVM')
+
+print('='*20+"starting training the model logistic regression"+'='*20)
+pred=classifierLogisticREG(features_train,test)
+write_csv(pred,'Logistic Regression')
 
