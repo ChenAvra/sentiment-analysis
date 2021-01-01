@@ -15,7 +15,9 @@ nltk.download('wordnet')
 nltk.download('punkt')
 from sklearn import svm
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from nltk.stem.wordnet import WordNetLemmatizer
+lema = WordNetLemmatizer()
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, KFold
 
 from sklearn.metrics import classification_report
 import statistics
@@ -49,10 +51,11 @@ def loading_data_preProcessing(path, is_test):
             new_row=""
             for word in to_fix_row:
                 #add . , : !
-                if (word not in stop_words and not word.isdigit() and not len(word)==1):
+                if (word not in stop_words):
+                # if (word not in stop_words and not word.isdigit() and not len(word) == 1):
                     word2= word.lower()
-                    # word3=PorterStemmer().stem(word2)
-                    new_row=new_row+" "+word2
+                    word3=lema.lemmatize(word2)
+                    new_row=new_row+" "+word3
             print(i)
             i=i+1
 
@@ -66,26 +69,15 @@ def loading_data_preProcessing(path, is_test):
 
 #  #feature extraction using tfidf
 def feature_extraction_train_test(train,test):
-    vectorize=TfidfVectorizer(ngram_range=(1,2))
-    vectorize = TfidfVectorizer(min_df = 5,
-                             max_df = 0.8,
-                             sublinear_tf = True,
-                             use_idf = True,ngram_range=(1,2))
+    vectorize = TfidfVectorizer(min_df = 10,
+                             max_df = 0.80,
+                                ngram_range=(1,2))
     # vectorize = TfidfVectorizer()
     features_train=vectorize.fit_transform(train)
     features_test=vectorize.transform(test)
     return features_train,features_test
 
 
-def classifierNaiveBayse(features_train,test,features_test):
-    model=MultinomialNB(alpha=0.01)
-    params={}
-    # skf = StratifiedKFold(n_splits=10)
-    # model = GridSearchCV(MultinomialNB(),cv=skf,params=params, n_jobs=1)
-
-    model.fit(features_train,test)
-    pred = model.predict(features_test)
-    return pred
 
 
 
@@ -118,6 +110,17 @@ def write_csv(pred,model_name):
                 writer.writerow({'ID': i, 'Sentiment': label})
                 i=i+1
 
+def classifierNaiveBayse(features_train,test,features_test):
+    model=MultinomialNB(alpha=0.01)
+    params={}
+    # skf = StratifiedKFold(n_splits=10)
+    # model = GridSearchCV(MultinomialNB(),cv=skf,params=params, n_jobs=1)
+
+    model.fit(features_train,test)
+    pred = model.predict(features_test)
+    return pred
+
+
 
 
 def classifierSVM(features_train,test,features_test):
@@ -131,10 +134,18 @@ def classifierSVM(features_train,test,features_test):
     return pred
 
 def classifierLogisticREG(features_train,test):
-    model=LogisticRegression(random_state=42,C=2)
+    model=LogisticRegression(random_state=42,C=1,max_iter=3000)
     model.fit(features_train,test)
     pred=model.predict(features_test)
     return pred
+
+def cross_validation(x,y, model):
+    # cv_outer = KFold(n_splits=10, shuffle=True, random_state=1)
+    scores = cross_val_score(model, x,y,scoring='accuracy', cv=10)
+    print(scores)
+    print("{} accuracy with a standard deviation of {}".format(scores.mean(), scores.std()))
+
+
 
 
 print('='*20+"starting preprocessing"+'='*20)
@@ -147,16 +158,24 @@ train_test=loading_data_preProcessing("Test.csv",True)
 print('='*20+"starting features extraction"+'='*20)
 features_train,features_test=feature_extraction_train_test(train,train_test)
 
-
-print('='*20+"starting training the model naive bayes"+'='*20)
-pred=classifierNaiveBayse(features_train,test,features_test)
-write_csv(pred,'Naive Bayes')
-
-print('='*20+"starting training the model svm"+'='*20)
-pred=classifierSVM(features_train,test,features_test)
-write_csv(pred,'SVM')
-
-print('='*20+"starting training the model logistic regression"+'='*20)
-pred=classifierLogisticREG(features_train,test)
-write_csv(pred,'Logistic Regression')
+print("Cross Validation Naive Base:**************************")
+cross_validation(features_train,test,MultinomialNB(alpha=0.01))
+print("*"*20)
+print("Cross Validation Logistic Regression:**************************")
+cross_validation(features_train,test,LogisticRegression(random_state=42,C=1,max_iter=3000))
+print("*"*20)
+print("Cross Validation SVM:**************************")
+cross_validation(features_train,test,svm.SVC(kernel='linear', C=2,random_state=42))
+print("*"*20)
+# print('='*20+"starting training the model naive bayes"+'='*20)
+# pred=classifierNaiveBayse(features_train,test,features_test)
+# write_csv(pred,'Naive Bayes')
+#
+# print('='*20+"starting training the model svm"+'='*20)
+# pred=classifierSVM(features_train,test,features_test)
+# write_csv(pred,'SVM')
+#
+# print('='*20+"starting training the model logistic regression"+'='*20)
+# pred=classifierLogisticREG(features_train,test)
+# write_csv(pred,'Logistic Regression')
 
